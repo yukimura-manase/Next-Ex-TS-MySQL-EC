@@ -1,0 +1,363 @@
+
+< アプリ概要 >
+
+1. ECサイトアプリ
+
+< アプリ機能 >
+
+①ページ単位
+    1. 商品一覧 => index.tsx (/)
+    2. 商品詳細 => [id].tsx (/products/[id])
+    3. カート画面 => cart.tsx (/cart)
+    4. ログイン画面 => login.tsx (/login)
+    5. 新規登録画面 => entry.tsx (/entry)
+    6. 注文確認画面 => order.tsx (/order)
+    7. 注文完了画面 => thanks.tsx (/thanks)
+    8. 注文履歴 => buyhistory.tsx (/buyhistory)
+    9. お気に入り画面 => like.tsx (/users/like)
+    10. マイページ => mypage.tsx (/users/mypage)
+    11. ユーザー情報編集画面 => myinfo.tsx (/users/myinfo)
+
+②コンポーネント単位
+    1. Header => タイトル(固定配置・変動なし)
+    2. Nav => ルーティング・導線(固定配置・変動あり => ログイン状態による)
+
+③機能単位
+    1. おすすめラーメン
+    2. おみくじ機能
+    3. ポイント機能
+    4. 割引デイ機能
+    5. リマインド機能
+
+< 意識すべき点 >
+
+1. SEO対策 => サーバーとの通信を極力減らす！
+
+2. 状態管理(State管理・データ管理) => 「ローカルストレージ」 および 「session-cookie」,「JWT認証」
+
+SSG, SSR, CSRの使い分け！
+
+SSG => 一覧画面
+
+useSWR(CSR)を使ってみる！
+
+データの保持 => リロード問題の解決
+
+ユースケースと条件分岐の意識
+
+3. ユーザー認証が必要なページに関しては、SEO対策は不要
+
+4. サーバー側でのエラーハンドリング
+
+5. ExpressにTypeScriptを導入する！
+
+6. TailwindCSSの導入！
+
+7. async/await(非同期通信)を使いこなす！
+
+< ユーザー・アクション(ユースケース)の定義 >
+
+ユーザーができることを定義しておく！
+
+1. 未ログインでも購入まではできる！
+ローカルストレージに購入状態を保持して、
+
+2. ログインまたは新規登録することができる！
+
+3. ユーザーは、ユーザー登録をすることでしか使用できない機能がいくつかある！
+    - お気に入り登録機能 => ノーログインだと保持データは消える！
+    - 注文履歴確認機能 => ノーログインだと保持データは消える！ , ログインすると出現する！
+    - マイページ => ログインすると出現する！,ユーザー情報を削除することもできる！
+    - ポイント機能 => ノーログインだと保持データは消える！
+
+
+< エラーハンドリング >
+
+フロント側は、Nextなので指定パスが存在しなければ404エラーページを表示してくれる！ => これからカスタマイズの余地あり！
+
+
+
+
+< アーキテクチャ図 >
+
+1. フロント => Next.js
+2. サーバー => Express
+3. DB => MySQL
+
+フロントアプリとDBの保持データの一致！ => どのタイミングで通信するか？
+
+
+< State管理・データ保持の仕組み >
+
+1. ノーログイン
+    ① Redux
+    ② セッションストレージ
+
+    セッションストレージによるデータの保持(ノーログイン)
+
+    セッションストレージにcartItemListとlikeItemListを保存 => リロードされたとしてもデータを保持する！
+
+2. ログイン
+    ① Redux
+    ② ローカルストレージ
+
+    一度ログインしたら意図的にログアウトしない限りは、ログイン状態を保持する！
+
+　  Express側でのセッション管理 & データの保持(ログイン)
+
+    ローカルストレージからuser_idとuserNameを送付 => セッションで判断してDBとやり取り！
+
+    < セッション情報:データ構造 >
+    最初からcookieが入っている！
+
+    Session {
+        cookie: {
+            path: '/',
+            _expires: 2021-11-20T00:02:46.080Z,
+            originalMaxAge: 86400000,
+            httpOnly: true
+        },
+        user: 'ロボ玉',
+        password: 'robo'
+    }
+
+    ローカルストレージに userName & user_id
+
+    リロードされたとしても、ローカルストレージに値があれば、勝手にユーザー情報を取ってくるよ！！
+
+    ローカルストレージにユーザーネームとIDがあって、なおかつStoreStateのuserデータが変更されたら、自動ログイン処理
+
+
+
+
+< データ構造 >
+
+① Productsテーブル
+
+{ 
+    Products : [
+        {
+            product_id: number;
+            name: string;
+            detail: string;
+            Msizeprice: number;
+            Lsizeprice: number;
+            pic: string
+        }
+    ]
+}
+
+② Usersテーブル
+
+{
+    user_id: number; // userのID (自動インクリーメント)
+    name: string; // ユーザー名(ユニーク)
+    user_image: string; // ユーザーの登録画像
+    password: string; // パスワード
+    mail :string; // メールアドレス
+    phoneNumber: string; // 電話番号
+    addressNumber: string; // 
+    address: string; // 
+    point: number; // ポイント
+    likeItemList: string; // お気に入り配列(JSONデータ)
+}
+
+    likeItemListのデータ構造
+
+    likeItemList: [ { id: number, name: string, detail: string, Msizeprice: number, Lsizeprice: number, pic: string } ]
+
+③ Cartsテーブル
+
+{
+    cart_id: number; // カートのid(user_idと紐づく)
+    status: number; // カートステータス => 未購入カート(status0)は1つのみ！他はhistoryカート
+    orderDate: string; // 注文日
+    userName // 購入者名
+    mail // メールアドレス
+    addressNumber: string; //　郵便番号
+    address: string;　// 住所
+    phoneNumber: string; // 電話番号
+    deliveryDate: string; // 配達日
+    deliveryTime: string; // 配達時間
+    cartItemList: string; // カート配列(JSONデータ)
+}
+
+    cartItemListのデータ構造
+
+    cartItemList: [] | [ { id:number, size:string, topping:string[], number:number, total:number } ]
+
+
+注文履歴画面の表示データ構造
+
+historyCarts = [
+    {
+        orderDate: string,
+        name: [ string ],
+        total: number,
+        point: number,
+        address: string,
+    }
+];
+
+
+
+< MySQL >
+
+MySQL データベース名: next_ts_es
+
+① table作成
+
+< productsテーブル >
+create table products (product_id int unsigned auto_increment not null, name varchar(255) unique, detail varchar(255), Msizeprice int unsigned , Lsizeprice int unsigned , pic varchar(255), PRIMARY KEY (product_id));
+
+mysql> describe products;
++------------+------------------+------+-----+---------+----------------+
+| Field      | Type             | Null | Key | Default | Extra          |
++------------+------------------+------+-----+---------+----------------+
+| product_id | int(10) unsigned | NO   | PRI | NULL    | auto_increment | // primary keyに設定
+| name       | varchar(255)     | YES  | UNI | NULL    |                |
+| detail     | varchar(255)     | YES  |     | NULL    |                |
+| Msizeprice | int(10) unsigned | YES  |     | NULL    |                |
+| Lsizeprice | int(10) unsigned | YES  |     | NULL    |                |
+| pic        | varchar(255)     | YES  |     | NULL    |                |
++------------+------------------+------+-----+---------+----------------+
+6 rows in set (0.07 sec)
+
+
+< usersテーブル >
+create table users (user_id int unsigned auto_increment not null, name varchar(255) unique, user_image varchar(255), password varchar(255), mail varchar(255), phoneNumber varchar(255), addressNumber varchar(255), address varchar(255), point int unsigned, likeItemList json default null, PRIMARY KEY (user_id));
+
+mysql> describe users;
++---------------+------------------+------+-----+---------+----------------+
+| Field         | Type             | Null | Key | Default | Extra          |
++---------------+------------------+------+-----+---------+----------------+
+| user_id       | int(10) unsigned | NO   | PRI | NULL    | auto_increment | // primary keyに設定
+| name          | varchar(255)     | YES  | UNI | NULL    |                | // 重複しない！
+| user_image    | varchar(255)     | YES  |     | NULL    |                |
+| password      | varchar(255)     | YES  |     | NULL    |                |
+| mail          | varchar(255)     | YES  |     | NULL    |                |
+| phoneNumber   | varchar(255)     | YES  |     | NULL    |                |
+| addressNumber | varchar(255)     | YES  |     | NULL    |                |
+| address       | varchar(255)     | YES  |     | NULL    |                |
+| point         | int(10) unsigned | YES  |     | NULL    |                |
+| likeItemList  | json             | YES  |     | NULL    |                |
++---------------+------------------+------+-----+---------+----------------+
+10 rows in set (0.02 sec)
+
+
+
+< cartsテーブル >
+create table carts (cart_id int unsigned not null, status int default 0, orderDate varchar(255), userName varchar(255), mail varchar(255), addressNumber varchar(255), address varchar(255), phoneNumber varchar(255), deliveryDate varchar(255), deliveryTime varchar(255), cartItemList JSON default null );
+
+mysql> describe carts;
++---------------+------------------+------+-----+---------+-------+
+| Field         | Type             | Null | Key | Default | Extra |
++---------------+------------------+------+-----+---------+-------+
+| cart_id       | int(10) unsigned | NO   |     | NULL    |       | => user_idと紐づくので、auto_incrementからは除外する！ 意図的にuser_idと同じ値をsetしていく！ 「primary key」(一意のkey)にもしない！
+| status        | int(11)          | YES  |     | 0       |       |
+| orderDate     | varchar(255)     | YES  |     | NULL    |       |
+| userName      | varchar(255)     | YES  |     | NULL    |       |
+| mail          | varchar(255)     | YES  |     | NULL    |       |
+| addressNumber | varchar(255)     | YES  |     | NULL    |       |
+| address       | varchar(255)     | YES  |     | NULL    |       |
+| phoneNumber   | varchar(255)     | YES  |     | NULL    |       |
+| deliveryDate  | varchar(255)     | YES  |     | NULL    |       |
+| deliveryTime  | varchar(255)     | YES  |     | NULL    |       |
+| cartItemList  | json             | YES  |     | NULL    |       |
++---------------+------------------+------+-----+---------+-------+
+11 rows in set (0.02 sec)
+
+
+< テーブル一覧 >
+
+mysql> show tables;
++----------------------+
+| Tables_in_next_ts_ec |
++----------------------+
+| carts                |
+| products             |
+| users                |
++----------------------+
+3 rows in set (0.01 sec)
+
+
+
+② table内のデータ追加
+
+< productsテーブル >
+
+1. insert into products (name, detail, Msizeprice, Lsizeprice, pic) values ('とんこつラーメン', '創業当時から今に引き継ぐとんこつラーメンの本流であり、原点の味。18時間の調理と、丸1日の熟成を経て、とんこつの旨味を極限まで抽出した豊かで香り高いシルキーなスープに、博多らしい細麺がマッチします。', 700, 800, '/pic/1.jpg');
+
+2. insert into products (name, detail, Msizeprice, Lsizeprice, pic) values ('赤ラーメン', '自家製の香味油と辛みそを加えることで、一杯のラーメンの中でいくつもの味の奥行きと調和を楽しめます。白丸が正統派のとんこつラーメンならば、赤丸新味は豚骨ラーメンの可能性を広げた“革新派”。 コクと深みを追求した、自信作です。', 750, 850, '/pic/2.jpg');
+
+3. insert into products (name, detail, Msizeprice, Lsizeprice, pic) values ('からか麺', '博多絹ごしとんこつをベースに、豆板醤や甜麺醤などを独自に配合した肉味噌を大胆にトッピング。山椒などのスパイスを効かせた自家製ラー油が全体をピリリとまとめあげ、中太のストレート麺がうま味と辛味を余すところなくすくいあげます。1989年に大名本店で登場以来、進化を続ける根強い人気の一杯です。', 800, 900, '/pic/3.jpg');
+
+4. insert into products (name, detail, Msizeprice, Lsizeprice, pic) values ('かさね味Special', '2001年、本店限定メニューとして誕生。とんこつと鶏ガラを素材に、それぞれの旨みを抽出しながら絶妙なバランスで合わせた鶏豚骨スープは、さっぱりとしながらも深みがあり、加水率の高い中太麺を引き立てています。', 800, 1000, '/pic/4.jpg');
+
+5. insert into products (name, detail, Msizeprice, Lsizeprice, pic) values ('百福元味', 'ラーメンに生涯を捧げた麺翁、日清食品創業者・安藤百福氏を想い、一風堂店主・河原成美が手掛けた醤油ラーメン。 国産の丸鶏を使用したスープ、国産小麦を2種類使用した平打ちちぢれ麺、自家製のごぼう香油など、こだわり抜かれた一杯です。', 980, 1080, '/pic/5.jpg');
+
+6. insert into products (name, detail, Msizeprice, Lsizeprice, pic) values ('川越とんこつ醤油', '埼玉県・川越のラーメン店と醤油メーカーが中心となって行っている「川越醤油ラーメン」プロジェクトに一風堂も参加！松本醤油商店さんの「はつかり醤油」と川越産の小松菜を一風堂のとんこつスープを合わせた「川越とんこつ醤油」です。', 880, 980, '/pic/6.jpg');
+
+7. insert into products (name, detail, Msizeprice, Lsizeprice, pic) values ('元祖・白丸元味／元祖・赤丸新味', '1985年に創業した博多 一風堂の1号店である大名本店限定メニュー。創業当時のトロリとしたポタージュのようなスープを再現し、通常よりも一段と濃厚な白丸/赤丸に仕上げています。全国のラーメンファン、観光客の方が、この味を求めて足を運んでくださいます。', 900, 1000, '/pic/7.jpg');
+
+8. insert into products (name, detail, Msizeprice, Lsizeprice, pic) values ('鶏とんこつ麺', '関西のラーメン激戦区で修行を積んだ親父による珠玉の一品。濃厚な鶏の凝縮されたコクのあるスープの旨味と極太麺に海苔の風味が上品かつ風情を醸し出した自信作。', 800, 900, '/pic/8.jpg');
+
+9. insert into products (name, detail, Msizeprice, Lsizeprice, pic) values ('辛味噌ちゃあしゅう麺', '九州で伝統的に伝わる発酵手法で作られた秘伝味噌をふんだんに使用したコクのある味噌ラーメン。チャーシューは低温調理で豚本来の旨味をぎゅっと閉じ込めた贅沢な一杯。', 820, 920, '/pic/9.jpg');
+
+10. insert into products (name, detail, Msizeprice, Lsizeprice, pic) values ('追い鰹チャーシュー', '関西のラーメンランキングでNo.1をとったこともある名店で仕込まれた味。香り高い追い鰹でとられたスープはただ飲むだけでなく、添えられた車麩に浸しても楽しめる。ここでしか食べられない極上の一杯。', 1050, 1100, '/pic/10.jpg');
+
+11. insert into products (name, detail, Msizeprice, Lsizeprice, pic) values ('鶏白湯坦々麺', '鶏の部位でも上質な部位のみを厳選し、旨味を閉じ込めた白湯スープ。10種類のスパイスが組み合わさった爽やかな辛さとナッツの甘味が香ばしさを引き立てた一杯。', 980, 1080, '/pic/11.jpg');
+
+12. insert into products (name, detail, Msizeprice, Lsizeprice, pic) values ('貝出汁らーめん原点', '人気の魚「貝」系らーめん。あさりやしじみの貝の旨味を閉じ込め、淡口醤油であっさり仕上げている。', 900, 1000, '/pic/12.jpg');
+
+13. insert into products (name, detail, Msizeprice, Lsizeprice, pic) values ('澄み切った醤油らーめん', '喉越しの良さを突き詰めた王道醤油ラーメン。すっきりとした見た目とは裏腹にじっくりのコクのある最後までスープを飲み干したくなる一杯。', 950, 1050, '/pic/13.jpg');
+
+14. insert into products (name, detail, Msizeprice, Lsizeprice, pic) values ('煮干しつけ麺', '煮干しでとられた醤油ベースのスープが喉越しの良いもっちりとした麺の味を引き立てるつけ麺。', 750, 850, '/pic/14.jpg');
+
+15. insert into products (name, detail, Msizeprice, Lsizeprice, pic) values ('旨辛味噌麺', '味噌ラーメンの常識を変える一杯。濃厚かつコクと深みのあるスープ、小麦の味がこみ上げる極太麺、ジューシーなチャーシューが胃袋を鷲掴みにする。', 680, 800, '/pic/15.jpg');
+
+16. insert into products (name, detail, Msizeprice, Lsizeprice, pic) values ('まぜ麺Gorgeous4', '食欲をそそるエスニックでスパイシーな一杯。しっかり混ぜて広がるまぜ麺に最後は追い飯をすれば、1度だけでなく2度楽しめるお得感のあるラーメンです。', 780, 880, '/pic/16.jpg');
+
+17. insert into products (name, detail, Msizeprice, Lsizeprice, pic) values ('台湾まぜそば', 'ピリ辛!!の台湾まぜそば汗をジンワリとかく程度の辛さで魚粉の香りが引き立ち、辛く味付けした挽肉が非常にマッチした一品。タレが残ったら追いめしが楽しめます。', 1200, 1300, '/pic/17.jpg');
+
+18. insert into products (name, detail, Msizeprice, Lsizeprice, pic) values ('真・澄み切った塩らーめん', '岩塩でキリッとさせた鶏スープがまとまりがある仕上がり。透明度の高いスープは旨味が凝縮された丁寧な一杯。何度でも食べたくなる味のラーメンです。', 990, 1090, '/pic/18.jpg');
+
+
+
+< ラーメンの商品データ >
+1, 'とんこつラーメン', '創業当時から今に引き継ぐとんこつラーメンの本流であり、原点の味。18時間の調理と、丸1日の熟成を経て、とんこつの旨味を極限まで抽出した豊かで香り高いシルキーなスープに、博多らしい細麺がマッチします。', 700, 800, '/pic/1.jpg'
+
+2, '赤ラーメン', '自家製の香味油と辛みそを加えることで、一杯のラーメンの中でいくつもの味の奥行きと調和を楽しめます。白丸が正統派のとんこつラーメンならば、赤丸新味は豚骨ラーメンの可能性を広げた“革新派”。 コクと深みを追求した、自信作です。', 750, 850, '/pic/2.jpg'
+
+3, 'からか麺', '博多絹ごしとんこつをベースに、豆板醤や甜麺醤などを独自に配合した肉味噌を大胆にトッピング。山椒などのスパイスを効かせた自家製ラー油が全体をピリリとまとめあげ、中太のストレート麺がうま味と辛味を余すところなくすくいあげます。1989年に大名本店で登場以来、進化を続ける根強い人気の一杯です。', 800, 900, '/pic/3.jpg'
+
+4, 'かさね味Special', '2001年、本店限定メニューとして誕生。とんこつと鶏ガラを素材に、それぞれの旨みを抽出しながら絶妙なバランスで合わせた鶏豚骨スープは、さっぱりとしながらも深みがあり、加水率の高い中太麺を引き立てています。', 900, 1000, '/pic/4.jpg'
+
+5, '百福元味', 'ラーメンに生涯を捧げた麺翁、日清食品創業者・安藤百福氏を想い、一風堂店主・河原成美が手掛けた醤油ラーメン。 国産の丸鶏を使用したスープ、国産小麦を2種類使用した平打ちちぢれ麺、自家製のごぼう香油など、こだわり抜かれた一杯です。', 980, 1080, '/pic/5.jpg'
+
+6, '川越とんこつ醤油', '埼玉県・川越のラーメン店と醤油メーカーが中心となって行っている「川越醤油ラーメン」プロジェクトに一風堂も参加！松本醤油商店さんの「はつかり醤油」と川越産の小松菜を一風堂のとんこつスープを合わせた「川越とんこつ醤油」です。', 880, 980, '/pic/6.jpg'
+
+7, '元祖・白丸元味／元祖・赤丸新味', '1985年に創業した博多 一風堂の1号店である大名本店限定メニュー。創業当時のトロリとしたポタージュのようなスープを再現し、通常よりも一段と濃厚な白丸/赤丸に仕上げています。全国のラーメンファン、観光客の方が、この味を求めて足を運んでくださいます。', 900, 1000, '/pic/7.jpg'
+
+8, '鶏とんこつ麺', '関西のラーメン激戦区で修行を積んだ親父による珠玉の一品。濃厚な鶏の凝縮されたコクのあるスープの旨味と極太麺に海苔の風味が上品かつ風情を醸し出した自信作。', 800, 900, '/pic/8.jpg'
+
+9, '辛味噌ちゃあしゅう麺', '九州で伝統的に伝わる発酵手法で作られた秘伝味噌をふんだんに使用したコクのある味噌ラーメン。チャーシューは低温調理で豚本来の旨味をぎゅっと閉じ込めた贅沢な一杯。', 820, 920, '/pic/9.jpg'
+
+10, '追い鰹チャーシュー', '関西のラーメンランキングでNo.1をとったこともある名店で仕込まれた味。香り高い追い鰹でとられたスープはただ飲むだけでなく、添えられた車麩に浸しても楽しめる。ここでしか食べられない極上の一杯。', 1050, 1100, '/pic/10.jpg'
+
+11, '鶏白湯坦々麺', '鶏の部位でも上質な部位のみを厳選し、旨味を閉じ込めた白湯スープ。10種類のスパイスが組み合わさった爽やかな辛さとナッツの甘味が香ばしさを引き立てた一杯。', 980, 1080, '/pic/11.jpg'
+
+12, '貝出汁らーめん原点', '人気の魚「貝」系らーめん。あさりやしじみの貝の旨味を閉じ込め、淡口醤油であっさり仕上げている。', 900, 1000, '/pic/12.jpg'
+
+13, '澄み切った醤油らーめん', '喉越しの良さを突き詰めた王道醤油ラーメン。すっきりとした見た目とは裏腹にじっくりのコクのある最後までスープを飲み干したくなる一杯。', 950, 1050, '/pic/13.jpg'
+
+14, '煮干しつけ麺', '煮干しでとられた醤油ベースのスープが喉越しの良いもっちりとした麺の味を引き立てるつけ麺。', 750, 850, '/pic/14.jpg'
+
+15, '旨辛味噌麺', '味噌ラーメンの常識を変える一杯。濃厚かつコクと深みのあるスープ、小麦の味がこみ上げる極太麺、ジューシーなチャーシューが胃袋を鷲掴みにする。', 680, 800, '/pic/15.jpg'
+
+16, 'まぜ麺Gorgeous4', '食欲をそそるエスニックでスパイシーな一杯。しっかり混ぜて広がるまぜ麺に最後は追い飯をすれば、1度だけでなく2度楽しめるお得感のあるラーメンです。', 780, 880, '/pic/16.jpg'
+
+17, '台湾まぜそば', 'ピリ辛!!の台湾まぜそば汗をジンワリとかく程度の辛さで魚粉の香りが引き立ち、辛く味付けした挽肉が非常にマッチした一品。タレが残ったら追いめしが楽しめます。', 1200, 1300, '/pic/17.jpg'
+
+18, '真・澄み切った塩らーめん', '岩塩でキリッとさせた鶏スープがまとまりがある仕上がり。透明度の高いスープは旨味が凝縮された丁寧な一杯。何度でも食べたくなる味のラーメンです。', 990, 1090, '/pic/18.jpg'
+
