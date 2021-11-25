@@ -199,8 +199,6 @@ const Nav = ()=> {
                     dispatch( fetchCartItem(NoLoginCart) );
                 };
 
-                
-
             };
 
         };
@@ -210,6 +208,7 @@ const Nav = ()=> {
     
     return (
         <div>
+            {}
             <button onClick={ ()=>{router.push('/')} } className={ classes.buttonStyle } >商品一覧</button>
             <button onClick={ ()=>{router.push('/cart')} } className={ classes.buttonStyle } >ショッピングカート</button>
             <button onClick={ ()=>{router.push('/like')} } className={ classes.buttonStyle } >お気に入り</button>
